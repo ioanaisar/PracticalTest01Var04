@@ -2,8 +2,12 @@ package ro.pub.cs.systems.eim.practicaltest01var04;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
@@ -20,12 +24,26 @@ public class PracticalTest01Var04MainActivity extends AppCompatActivity {
     CheckBox nameCheck = null;
     CheckBox grupaCheck= null;
 
+    Object serviceStatus = Constants.SERVICE_STOPPED;
+
     private TextView stringFinal = null;
     String nameStud;
     String groupStud;
 
     String info;
 
+
+    BroadcastReceiver broadcastReceiver = new PracticalTest01BroadcastReceiver();
+
+    private IntentFilter intentFilter = new IntentFilter();
+
+    private class PracticalTest01BroadcastReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(Constants.BROADCAST_RECEIVER_EXTRA, intent.getStringExtra(Constants.BROADCAST_RECEIVER_EXTRA));
+        }
+    }
     private RegisterButtonClickListener registerButtonClickListener = new RegisterButtonClickListener();
 
     private class RegisterButtonClickListener implements View.OnClickListener {
@@ -53,10 +71,26 @@ public class PracticalTest01Var04MainActivity extends AppCompatActivity {
 
             stringFinal.setText(info);
 
+            if (!nameStud.isEmpty() && !groupStud.isEmpty()) {
+               myStartService();
+            } else {
+                Toast.makeText(getApplication(), "No student name or group", Toast.LENGTH_LONG).show();
+            }
 
 
         }
     }
+
+
+    // porneste serviciu
+    public void myStartService() {
+            Intent intent = new Intent(getApplicationContext(),PracticalTest01Var04Service.class);
+            intent.putExtra(Constants.STUDENT_TEXT, name.getText().toString());
+            intent.putExtra(Constants.GROUP_TEXT, group.getText().toString());
+            getApplicationContext().startService(intent);
+            serviceStatus = Constants.SERVICE_STARTED;
+        }
+
 
     private RegisterButtonClickListenerNavigate registerButtonClickListenerNavigate= new RegisterButtonClickListenerNavigate();
 
@@ -92,6 +126,10 @@ public class PracticalTest01Var04MainActivity extends AppCompatActivity {
         stringFinal = (TextView) findViewById(R.id.finalStr);
         display.setOnClickListener(registerButtonClickListener);
         navigate.setOnClickListener(registerButtonClickListenerNavigate);
+
+        for (int index = 0; index < Constants.actionTypes.length; index++) {
+            intentFilter.addAction(Constants.actionTypes[index]);
+        }
 
 
     }
@@ -139,6 +177,23 @@ public class PracticalTest01Var04MainActivity extends AppCompatActivity {
                 Toast.makeText(this, "The activity returned with result CANCEL", Toast.LENGTH_LONG).show();
             }
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Intent intent = new Intent(getApplicationContext(), PracticalTest01Var04Service.class);
+        getApplicationContext().stopService(intent);
+    }
+
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(broadcastReceiver);
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(broadcastReceiver, intentFilter);
     }
 
 
